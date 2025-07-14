@@ -17,5 +17,56 @@ When you click the **Knit** button a document will be generated that includes bo
 
 ```{rr pressure, echo=TRUE}
 getwd()
+library(tidyverse)
+library(dplyr)
 
+#gene data
+gene_data <- read.csv(file = "QBS103_GSE157103_genes.csv",row.names=1)
+dim(gene_data)
+str(gene_data)
+head(gene_data)
+
+#metadata
+series <- read.csv(file = "QBS103_GSE157103_series_matrix-1.csv")
+dim(series)
+str(series)
+head(series)
+
+#1.
+#histogram
+new_gene <- as.numeric(gene_data[1, ])
+new_gene <- data.frame(value = new_gene)
+ggplot(new_gene, aes(x = value)) +
+  geom_histogram(bins = 50, color = "black", fill = "skyblue") +
+  labs(title = "Histogram of A1BG Expression",
+       x = "A1BG value",
+       y = "Frequency")
+
+#2.
+#scatterplot
+gene_line1 <- gene_data[1, ] %>% 
+  pivot_longer(cols = everything(),names_to = "participant_id",values_to = "A1BG_value")
+
+gene_line1
+dim(gene_line1)
+dim(series)
+
+new_df<-merge(series,gene_line1,by="participant_id")
+dim(new_df)
+str(new_df)
+
+ggplot(new_df,aes(x=age,y=A1BG_value))+
+  geom_point()+
+  labs(title = "Scatterplot of A1BG Expression versus Age",
+       x = "Age (years)",
+       y = "A1BG Gene Expression")
+
+#3.boxplot
+ggplot(new_df,aes(x=sex,y=A1BG_value,color=icu_status))+
+  geom_boxplot()+
+  labs(
+    title = "A1BG Expression by Sex and ICU Status",
+    x = "Sex",
+    y = "A1BG Gene Expression",
+    fill = "ICU Status")
 ```
