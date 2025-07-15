@@ -15,27 +15,28 @@ This is an R Markdown document. Markdown is a simple formatting syntax for autho
 
 When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
 
-```{rr pressure, echo=TRUE}
+```{r}
 getwd()
 library(tidyverse)
 library(dplyr)
 
-#gene data
+#Load gene expression data
 gene_data <- read.csv(file = "QBS103_GSE157103_genes.csv",row.names=1)
 dim(gene_data)
 str(gene_data)
-head(gene_data)
 
-#metadata
+#Load metadata for participants
 series <- read.csv(file = "QBS103_GSE157103_series_matrix-1.csv")
 dim(series)
 str(series)
-head(series)
 
 #1.
-#histogram
+#Histogram of gene expression
+#Select the first gene (A1BG) for analysis and convert to numeric vector
 new_gene <- as.numeric(gene_data[1, ])
 new_gene <- data.frame(value = new_gene)
+
+#Plot histogram for A1BG expression values across all participants
 ggplot(new_gene, aes(x = value)) +
   geom_histogram(bins = 50, color = "black", fill = "skyblue") +
   labs(title = "Histogram of A1BG Expression",
@@ -43,25 +44,37 @@ ggplot(new_gene, aes(x = value)) +
        y = "Frequency")
 
 #2.
-#scatterplot
+#Scatterplot of gene expression vs age
+#Pivot gene expression row into long format for merging
 gene_line1 <- gene_data[1, ] %>% 
   pivot_longer(cols = everything(),names_to = "participant_id",values_to = "A1BG_value")
-
-gene_line1
 dim(gene_line1)
 dim(series)
 
+# Merge with metadata by participant_id to obtain age and other covariates
 new_df<-merge(series,gene_line1,by="participant_id")
 dim(new_df)
 str(new_df)
 
-ggplot(new_df,aes(x=age,y=A1BG_value))+
+#Prepare age levels for the x-axis: numeric ages in ascending order, then special categories
+num_ages <- sort(as.numeric(unique(new_df$age)[!grepl("[^0-9]", unique(new_df$age))]))
+special_ages <- unique(new_df$age)[grepl("[^0-9]", unique(new_df$age))]
+age_levels <- c(as.character(num_ages), special_ages)
+
+# Scatterplot: A1BG expression vs age (x-axis shows all ages in specified order)
+ggplot(new_df,aes(x=factor(age, levels = age_levels),y=A1BG_value))+
   geom_point()+
   labs(title = "Scatterplot of A1BG Expression versus Age",
        x = "Age (years)",
-       y = "A1BG Gene Expression")
+       y = "A1BG Gene Expression")+
+  theme(axis.text.x = element_text(angle = 60, hjust = 1, size = 7))+
+  scale_x_discrete(breaks = age_levels[seq(1, length(age_levels), by = 5)])
 
-#3.boxplot
+
+
+#3.
+#Boxplot of gene expression by sex and ICU status
+#sex: categorical variable; icu_status: categorical variable
 ggplot(new_df,aes(x=sex,y=A1BG_value,color=icu_status))+
   geom_boxplot()+
   labs(
@@ -69,4 +82,5 @@ ggplot(new_df,aes(x=sex,y=A1BG_value,color=icu_status))+
     x = "Sex",
     y = "A1BG Gene Expression",
     fill = "ICU Status")
+
 ```
