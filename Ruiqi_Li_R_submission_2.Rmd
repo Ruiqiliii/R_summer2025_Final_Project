@@ -2,7 +2,9 @@
 title: "R Submission 2"
 author: "Ruiqi Li"
 date: "2025-07-22"
-output: html_document
+output:
+  pdf_document: default
+  html_document: default
 ---
 
 ```{r setup, include=FALSE}
@@ -10,15 +12,25 @@ knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
 library(dplyr)
 library(rlang)
+library(ggpubr)
 ```
 
-## R Markdown
+## Overview
 
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+In this submission, I:
+1. Write a function (`create_plot`) that generates the three figures from Presentation 1, taking as input
 
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+   (a) a data frame, 
+   (b) a list of >=1 gene names, 
+   (c) one continuous covariate, and 
+   (d) two categorical covariates. 
+   
+2. Loop over 3 selected genes to produce all plots. 
+3. Prepare one boxplot to discuss in class.
 
-```{r}
+Data used: `QBS103_GSE157103_genes.csv` (gene expression) and `QBS103_GSE157103_series_matrix-1.csv` (metadata).
+
+```{r out.width='90%', fig.align='center'}
 #submission 2
 #Load gene expression data
 gene_data <- read.csv(file = "QBS103_GSE157103_genes.csv",row.names=1)
@@ -26,49 +38,54 @@ gene_data <- read.csv(file = "QBS103_GSE157103_genes.csv",row.names=1)
 #Load metadata for participants
 series <- read.csv(file = "QBS103_GSE157103_series_matrix-1.csv")
 
-#1.
+# Build plots for a list of genes
 create_plot<-function(gene_data, metadata,gene_list,
                       continue_v,categorical_v1,categorical_v2){
   histog_list=list()
   scatter_list=list()
   boxplot_list=list()
   for(i in gene_list){
+     # 1. Pull one gene row (expression across all samples)
     new_gene <- gene_data[i, ]
     
-    #Plot histogram for gene expression values across all participants
-    histog_list[[i]]<-ggplot(data.frame(value = as.numeric(new_gene)), aes(x = value)) +
+    # 2. Histogram for that gene
+    histog_list[[i]]<-ggplot(data.frame(value = as.numeric(new_gene)), 
+                             aes(x = value)) +
     geom_histogram(bins = 50, color = "black", fill = "skyblue") +
     labs(title = paste(i, "Expression"),
          x     = paste(i, "value"),
          y     = "Frequency")
   
-   #Pivot gene expression row into long format for merging
+   # 3. Long format + merge with metadata
    gene_line1 <- new_gene %>% 
-   pivot_longer(cols = everything(),names_to = "participant_id",values_to = i)
+    pivot_longer(cols = everything(), 
+                 names_to = "participant_id", 
+                 values_to = "expr")
 
-   # Merge with metadata by participant_id to obtain age and other covariates
    new_df<-merge(metadata,gene_line1,by="participant_id")
+   new_df$expr <- as.numeric(new_df$expr)
+   new_df$cont_num <- suppressWarnings(as.numeric(new_df[[continue_v]]))
+   new_df <- filter(new_df, !is.na(cont_num), !is.na(expr))
   
-   # Scatterplot: gene expression vs age (x-axis shows all ages in specified order)
-   scatter_list[[i]]<-ggplot(new_df, aes(x = as.numeric(.data[[continue_v]]), 
-                                         y = .data[[i]])) +
+   # 4. Scatterplot: expression vs continuous covariate
+   scatter_list[[i]]<-ggplot(new_df, aes(x = as.numeric(cont_num), 
+                                         y = expr)) +
      geom_point() +
-     geom_smooth(method = "loess") +
+     geom_smooth(method = "loess", se = TRUE, formula = y ~ x) +
      labs(title = paste(i," Expression"),
           x = continue_v,
           y = paste(i," Gene Expression"))
    
-   #Boxplot of gene expression by sex and ICU status
-   #sex: categorical variable; icu_status: categorical variable
+   # 5. Boxplot: expression by two categorical covariates
    boxplot_list[[i]]<-ggplot(new_df,aes(x=.data[[categorical_v1]],
-                                        y=.data[[i]],
+                                        y=expr,
                                         color=.data[[categorical_v2]]))+
      geom_boxplot()+
      labs(
        title = paste(i," Expression"),
        x = categorical_v1,
        y =paste( i," Gene Expression"),
-       fill = categorical_v2)
+       color = categorical_v2)
 
   }
   
@@ -80,7 +97,10 @@ create_plot<-function(gene_data, metadata,gene_list,
                                     " and ",
                                     categorical_v2))
 }
+```
 
+```{r out.width='90%', fig.align='center'}
+# Arrange a list of ggplots and add a common title
 arrange_plot<-function(plot_list,title_text){
   n <- length(plot_list)
   final_plot <- do.call(
@@ -103,10 +123,16 @@ arrange_plot<-function(plot_list,title_text){
     )
   print(final_plot_with_title)
 }
+```
 
+```{r out.width='90%', fig.align='center'}
+# Pick three genes by row index (1, 3, 8)
 gene_list=list(rownames(gene_data)[1],
                rownames(gene_data)[3],
                rownames(gene_data)[8])
+
+# Create all required plots: df, gene list, 1 continuous ("age"),
+# 2 categorical ("sex","icu_status")
 create_plot(gene_data, series,gene_list,"age","sex","icu_status")
 ```
 
