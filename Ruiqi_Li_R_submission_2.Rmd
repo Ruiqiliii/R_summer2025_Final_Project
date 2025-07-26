@@ -9,6 +9,7 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
 library(dplyr)
+library(rlang)
 ```
 
 ## R Markdown
@@ -18,6 +19,94 @@ This is an R Markdown document. Markdown is a simple formatting syntax for autho
 When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
 
 ```{r}
-summary(cars)
+#submission 2
+#Load gene expression data
+gene_data <- read.csv(file = "QBS103_GSE157103_genes.csv",row.names=1)
+
+#Load metadata for participants
+series <- read.csv(file = "QBS103_GSE157103_series_matrix-1.csv")
+
+#1.
+create_plot<-function(gene_data, metadata,gene_list,
+                      continue_v,categorical_v1,categorical_v2){
+  histog_list=list()
+  scatter_list=list()
+  boxplot_list=list()
+  for(i in gene_list){
+    new_gene <- gene_data[i, ]
+    
+    #Plot histogram for gene expression values across all participants
+    histog_list[[i]]<-ggplot(data.frame(value = as.numeric(new_gene)), aes(x = value)) +
+    geom_histogram(bins = 50, color = "black", fill = "skyblue") +
+    labs(title = paste(i, "Expression"),
+         x     = paste(i, "value"),
+         y     = "Frequency")
+  
+   #Pivot gene expression row into long format for merging
+   gene_line1 <- new_gene %>% 
+   pivot_longer(cols = everything(),names_to = "participant_id",values_to = i)
+
+   # Merge with metadata by participant_id to obtain age and other covariates
+   new_df<-merge(metadata,gene_line1,by="participant_id")
+  
+   # Scatterplot: gene expression vs age (x-axis shows all ages in specified order)
+   scatter_list[[i]]<-ggplot(new_df, aes(x = as.numeric(.data[[continue_v]]), 
+                                         y = .data[[i]])) +
+     geom_point() +
+     geom_smooth(method = "loess") +
+     labs(title = paste(i," Expression"),
+          x = continue_v,
+          y = paste(i," Gene Expression"))
+   
+   #Boxplot of gene expression by sex and ICU status
+   #sex: categorical variable; icu_status: categorical variable
+   boxplot_list[[i]]<-ggplot(new_df,aes(x=.data[[categorical_v1]],
+                                        y=.data[[i]],
+                                        color=.data[[categorical_v2]]))+
+     geom_boxplot()+
+     labs(
+       title = paste(i," Expression"),
+       x = categorical_v1,
+       y =paste( i," Gene Expression"),
+       fill = categorical_v2)
+
+  }
+  
+    arrange_plot(histog_list,"Histogram of Gene Expression")
+    arrange_plot(scatter_list,paste("Scatterplot of Gene Expression versus ",
+                                    continue_v))
+    arrange_plot(boxplot_list,paste("Gene Expression by ",
+                                    categorical_v1,
+                                    " and ",
+                                    categorical_v2))
+}
+
+arrange_plot<-function(plot_list,title_text){
+  n <- length(plot_list)
+  final_plot <- do.call(
+  ggarrange,
+  c(
+    plot_list,                             
+    list(                                 
+      labels = LETTERS[1:n],
+      ncol = n,                            
+      nrow = 1,
+      common.legend = TRUE,
+      legend = "right"
+      )
+    )
+  )
+  final_plot_with_title <- annotate_figure(
+    final_plot,
+    top = text_grob(title_text,
+                  face = "bold", size = 16)
+    )
+  print(final_plot_with_title)
+}
+
+gene_list=list(rownames(gene_data)[1],
+               rownames(gene_data)[3],
+               rownames(gene_data)[8])
+create_plot(gene_data, series,gene_list,"age","sex","icu_status")
 ```
 
