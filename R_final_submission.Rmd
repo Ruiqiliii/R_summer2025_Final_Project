@@ -266,7 +266,7 @@ pca_df$participant_id <- rownames(pca_df)
 meta <- series_sub %>%
   mutate(
     sex = tolower(trimws(sex)),
-    sex = ifelse(sex %in% c("Female","Male"), sex, "Unknown"),
+    sex = ifelse(sex %in% c("female","male"), sex, "unknown"),
     icu_status = ifelse(tolower(trimws(icu_status)) == "yes", "ICU", "NonICU")
   ) %>%
   select(participant_id, sex, icu_status)
@@ -274,6 +274,7 @@ meta <- series_sub %>%
 # Join and coerce to factors (good for legends/shapes)
 pca_df <- dplyr::left_join(pca_df, meta, by = "participant_id") %>%
   mutate(
+    sex = recode(sex, "female" = "Female", "male" = "Male", "unknown" = "Unknown"),
     sex = factor(sex, levels = c("Female","Male","Unknown")),
     icu_status = factor(icu_status, levels = c("ICU","NonICU"))
   )
