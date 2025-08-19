@@ -28,14 +28,14 @@ series <- read.csv(file = "QBS103_GSE157103_series_matrix-1.csv")
 dim(series)
 str(series)
 
+rownames(gene_data)[1]
 #1.
 #Histogram of gene expression
 #Select the first gene (A1BG) for analysis and convert to numeric vector
-new_gene <- as.numeric(gene_data[1, ])
-new_gene <- data.frame(value = new_gene)
+new_gene <- gene_data[1, ]
 
 #Plot histogram for A1BG expression values across all participants
-ggplot(new_gene, aes(x = value)) +
+ggplot(data.frame(value=as.numeric(new_gene)), aes(x = value)) +
   geom_histogram(bins = 50, color = "black", fill = "skyblue") +
   labs(title = "Histogram of A1BG Expression",
        x = "A1BG value",
@@ -44,7 +44,7 @@ ggplot(new_gene, aes(x = value)) +
 #2.
 #Scatterplot of gene expression vs age
 #Pivot gene expression row into long format for merging
-gene_line1 <- gene_data[1, ] %>% 
+gene_line1 <- new_gene %>% 
   pivot_longer(cols = everything(),names_to = "participant_id",values_to = "A1BG_value")
 dim(gene_line1)
 dim(series)
@@ -68,7 +68,12 @@ ggplot(new_df,aes(x=factor(age, levels = age_levels),y=A1BG_value))+
   theme(axis.text.x = element_text(angle = 60, hjust = 1, size = 7))+
   scale_x_discrete(breaks = age_levels[seq(1, length(age_levels), by = 5)])
 
-
+ggplot(new_df, aes(x = as.numeric(age), y = A1BG_value)) +
+  geom_point() +
+  geom_smooth(method = "loess") +
+  labs(title = "Scatterplot of A1BG Expression versus Age",
+       x = "Age (years)",
+       y = "A1BG Gene Expression")
 
 #3.
 #Boxplot of gene expression by sex and ICU status
