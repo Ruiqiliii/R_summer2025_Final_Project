@@ -137,6 +137,16 @@ ggplot(new_df, aes(x = age_num, y = A1BG_value)) +
 #3.
 #Boxplot of gene expression by sex and ICU status
 #sex: categorical variable; icu_status: categorical variable
+new_df <- new_df %>%
+  mutate(
+    sex = tolower(trimws(sex)),
+    sex = recode(sex,
+                 "female" = "Female",
+                 "male"   = "Male",
+                 "unknown"= "Unknown"),
+    sex = factor(sex, levels = c("Female","Male","Unknown"))
+  )
+
 ggplot(new_df, aes(x = sex, y = A1BG_value, fill = icu_status)) +
   geom_boxplot(alpha = 0.8, outlier.shape = NA) +
   labs(
@@ -190,18 +200,18 @@ icu_raw   <- trimws(series_sub$icu_status)
 icu_clean <- ifelse(tolower(icu_raw) == "yes", "ICU", "NonICU")
 
 # Convert sex into male/female categories
-sex_clean <- ifelse(grepl("^f", tolower(sex_clean)), "female", "male")
+sex_clean <- ifelse(grepl("^f", tolower(sex_clean)), "Female", "Male")
 
 # Prepare annotation dataframe for heatmap
 annotationData <- data.frame(
-  Sex = factor(sex_clean, levels = c("female","male")),
+  Sex = factor(sex_clean, levels = c("Female","Male")),
   ICU = factor(icu_clean, levels = c("ICU","NonICU")),
   row.names = series_sub$participant_id
 )
 
 # Define color scheme for annotations
 annotationColors <- list(
-  Sex = c(female = "#E377C2", male = "#1F77B4"),
+  Sex = c(Female = "#E377C2", Male = "#1F77B4"),
   ICU = c(ICU = "#D62728", NonICU = "#2CA02C")
 )
 
@@ -256,7 +266,7 @@ pca_df$participant_id <- rownames(pca_df)
 meta <- series_sub %>%
   mutate(
     sex = tolower(trimws(sex)),
-    sex = ifelse(sex %in% c("female","male"), sex, "unknown"),
+    sex = ifelse(sex %in% c("Female","Male"), sex, "Unknown"),
     icu_status = ifelse(tolower(trimws(icu_status)) == "yes", "ICU", "NonICU")
   ) %>%
   select(participant_id, sex, icu_status)
@@ -264,7 +274,7 @@ meta <- series_sub %>%
 # Join and coerce to factors (good for legends/shapes)
 pca_df <- dplyr::left_join(pca_df, meta, by = "participant_id") %>%
   mutate(
-    sex = factor(sex, levels = c("female","male","unknown")),
+    sex = factor(sex, levels = c("Female","Male","Unknown")),
     icu_status = factor(icu_status, levels = c("ICU","NonICU"))
   )
 
