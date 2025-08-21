@@ -23,6 +23,8 @@ gene_data <- read.csv(file = "QBS103_GSE157103_genes.csv",row.names=1)
 
 #Load metadata for participants
 series <- read.csv(file = "QBS103_GSE157103_series_matrix-1.csv")
+str(series)
+dim(series)
 ```
 Generate a table formatted in LaTeX of summary statistics for all the covariates you looked at and 2 additional continuous (3 total) and 1 additional categorical variable (3 total). (5 pts)
 Stratifying by one of your categorical variables
@@ -188,7 +190,7 @@ series_sub <- series %>% filter(participant_id %in% common) %>%
 mat_log <- log2(mat + 1)
 
 # Select the top 20 most variable genes across samples
-topN <- 20   
+topN <- 16   
 top_idx <- order(apply(mat_log, 1, var, na.rm = TRUE), decreasing = TRUE)[1:topN]
 sub <- mat_log[top_idx, , drop = FALSE]
 
@@ -217,7 +219,7 @@ annotationColors <- list(
 
 # Randomly select 25 samples for visualization
 set.seed(100)
-subset_cols <- sample(colnames(sub), 25)
+subset_cols <- sample(colnames(sub), 30)
 sub25 <- sub[, subset_cols, drop = FALSE]
 ann25 <- annotationData[subset_cols, , drop = FALSE]
 
@@ -244,6 +246,7 @@ pheatmap(
   fontsize_col = 7,                       # font size for column labels
   angle_col = 45,                         # rotate labels for clarity
   fontsize_row = 7,                       # font size for row labels
+  main = "Heatmap of 16 Genes with ICU and Sex Annotations"
 )
 
 ```
