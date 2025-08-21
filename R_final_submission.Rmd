@@ -12,6 +12,8 @@ knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
 library(dplyr)
 library(pheatmap)
+# Load the hexbin package (needed for hexagonal binning)
+library(hexbin) 
 ```
 
 ## Final Project
@@ -23,8 +25,6 @@ gene_data <- read.csv(file = "QBS103_GSE157103_genes.csv",row.names=1)
 
 #Load metadata for participants
 series <- read.csv(file = "QBS103_GSE157103_series_matrix-1.csv")
-str(series)
-dim(series)
 ```
 Generate a table formatted in LaTeX of summary statistics for all the covariates you looked at and 2 additional continuous (3 total) and 1 additional categorical variable (3 total). (5 pts)
 Stratifying by one of your categorical variables
@@ -60,8 +60,10 @@ df %>%
   summarise(
     n_sex_female = sum(sex == "female", na.rm=TRUE),   # Count number of females
     n_sex_male   = sum(sex == "male", na.rm=TRUE),     # Count number of males
-    n_mechvent_yes = sum(mech_vent == "Yes", na.rm=TRUE), # Count patients with mechanical ventilation
-    n_mechvent_no  = sum(mech_vent == "No", na.rm=TRUE),  # Count patients without mechanical ventilation
+    n_mechvent_yes = sum(mech_vent == "Yes", na.rm=TRUE), # Count patients with 
+                                                          # mechanical ventilation
+    n_mechvent_no  = sum(mech_vent == "No", na.rm=TRUE),  # Count patients without
+                                                          # mechanical ventilation
     .groups="drop"
   )
 
@@ -190,7 +192,7 @@ series_sub <- series %>% filter(participant_id %in% common) %>%
 mat_log <- log2(mat + 1)
 
 # Select the top 20 most variable genes across samples
-topN <- 16   
+topN <- 20   
 top_idx <- order(apply(mat_log, 1, var, na.rm = TRUE), decreasing = TRUE)[1:topN]
 sub <- mat_log[top_idx, , drop = FALSE]
 
@@ -219,7 +221,7 @@ annotationColors <- list(
 
 # Randomly select 25 samples for visualization
 set.seed(100)
-subset_cols <- sample(colnames(sub), 30)
+subset_cols <- sample(colnames(sub), 25)
 sub25 <- sub[, subset_cols, drop = FALSE]
 ann25 <- annotationData[subset_cols, , drop = FALSE]
 
@@ -246,62 +248,53 @@ pheatmap(
   fontsize_col = 7,                       # font size for column labels
   angle_col = 45,                         # rotate labels for clarity
   fontsize_row = 7,                       # font size for row labels
-  main = "Heatmap of 16 Genes with ICU and Sex Annotations"
+  main = "Heatmap of 20 Genes with ICU and Sex Annotations"
 )
 
 ```
 
-Going through the documentation for ggplot2, generate a plot type that we did not previously discuss in class that describes your data in a new and unique way (5 pts) 
+Going through the documentation for ggplot2, generate a plot type that we did not previously discuss in class that describes your data in a new and unique way (5 pts)
+
 ```{r}
-# Select top N genes with highest variance across samples
-topN <- 50
-top_idx <- order(apply(mat_log, 1, var, na.rm = TRUE), decreasing = TRUE)[1:topN]
-mat_top <- mat_log[top_idx, , drop = FALSE]
-
-# PCA on samples (transpose), centered & scaled
-pca <- prcomp(t(mat_top), center = TRUE, scale. = TRUE)
-
-# First two PCs to data frame
-pca_df <- as.data.frame(pca$x[, 1:2])
-pca_df$participant_id <- rownames(pca_df)
-
-# Clean metadata; standardize labels
-meta <- series_sub %>%
+df2d <- new_df %>%
   mutate(
-    sex = tolower(trimws(sex)),
-    sex = ifelse(sex %in% c("female","male"), sex, "unknown"),
-    icu_status = ifelse(tolower(trimws(icu_status)) == "yes", "ICU", "NonICU")
-  ) %>%
-  select(participant_id, sex, icu_status)
-
-# Join and coerce to factors (good for legends/shapes)
-pca_df <- dplyr::left_join(pca_df, meta, by = "participant_id") %>%
-  mutate(
-    sex = recode(sex, "female" = "Female", "male" = "Male", "unknown" = "Unknown"),
-    sex = factor(sex, levels = c("Female","Male","Unknown")),
+    icu_status = ifelse(tolower(trimws(icu_status)) == "yes", "ICU", "NonICU"),
     icu_status = factor(icu_status, levels = c("ICU","NonICU"))
   )
 
-# Variance explained for axis labels
-var_exp <- round(100 * (pca$sdev^2 / sum(pca$sdev^2)))[1:2]
-
-# Plot: map color globally, shape only on points (no warning from stat_ellipse)
-ggplot(pca_df, aes(PC1, PC2, color = icu_status)) +
-  geom_point(aes(shape = sex), size = 2.5, alpha = 0.9) +
-  stat_ellipse(aes(group = icu_status), linetype = 2) +
-  labs(
-    title = "PCA of Top-Variance Genes",
-    x = paste0("PC1 (", var_exp[1], "%)"),
-    y = paste0("PC2 (", var_exp[2], "%)"),
-    color = "ICU", shape = "Sex"
-  ) +
-  theme_minimal(base_size = 14) +
-  theme(
-    plot.title = element_text(size = 18, face = "bold", hjust = 0.5),
-    axis.title = element_text(size = 14, face = "bold"),
-    axis.text = element_text(size = 12),
-    legend.title = element_text(size = 13, face = "bold"),
-    legend.text = element_text(size = 12)
+# Create a hexbin plot using ggplot2
+ggplot(df2d, aes(age_num, A1BG_value)) +   
+  
+  # Use hexagonal binning instead of scatterplot (reduces overplotting for large datasets)
+  geom_hex(bins = 25) +                  
+   
+  # Split the plot by ICU status into separate panels (faceting)
+  facet_wrap(~ icu_status, nrow = 1) +   
+  
+  # Keep axes tight to data, no extra padding around
+  coord_cartesian(expand = FALSE) +      
+  
+  # Use Viridis color scale (better perceptual uniformity)
+  scale_fill_viridis_c() +               
+  
+  # Add descriptive labels and titles
+  labs(     
+    title = "Hexbin of Age vs A1BG by ICU Status",  # Plot title
+    x = "Age (years)",                              # X-axis label
+    y = "A1BG Expression",                          # Y-axis label
+    fill = "Count"                                  # Legend label (number of 
+                                                    # samples in each hexagon)
+  ) +   
+  
+  # Apply a clean theme with base font size 14
+  theme_minimal(base_size = 14) +   
+  
+  # Customize title, axis, and facet label styles
+  theme(     
+    plot.title = element_text(size = 18, face = "bold", hjust = 0.5), # Centered bold title
+    axis.title = element_text(size = 14, face = "bold"),              # Bold axis titles
+    strip.text = element_text(size = 13, face = "bold")               # Bold facet labels
   )
 
 ```
+

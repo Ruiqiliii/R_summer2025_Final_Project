@@ -97,18 +97,31 @@ The heatmap of the top variance genes (Figure~\ref{fig:heatmap}) summarizes mult
 \label{fig:heatmap}
 \end{figure}
 
-\subsection{New plot type (PCA)}
-As an additional exploratory analysis, I performed principal component analysis (PCA) on the expression data of the top-variance genes. 
-The first two principal components (PC1 and PC2) accounted for a substantial proportion of the overall variance in the dataset, with PC1 capturing XX\% and PC2 capturing YY\% of the variation (Figure~\ref{fig:pca}). \\
-Notably, partial separation of samples was observed along PC1 according to ICU status, suggesting that global transcriptional differences may exist between ICU and non-ICU patients. 
-This finding highlights the potential of PCA as a dimensionality reduction approach to summarize complex gene expression data.
+\subsection{New plot type (Hexbin)}
+
+To provide a new view of the relationship between age and gene expression beyond the standard scatterplot, I used a \textbf{hexbin plot} implemented in \texttt{ggplot2::geom\_hex}. A hexbin plot partitions the 2D plane into small hexagonal cells and colours each cell by the number of observations it contains. This effectively solves overplotting when many points overlap and reveals the underlying \emph{density structure} of the data.
+
+\paragraph{What is shown.}
+Each panel displays patients from one ICU stratum (ICU vs.\ NonICU). The \textbf{x-axis} is age (years) and the \textbf{y-axis} is A1BG expression. The \textbf{colour scale} (legend ``Count'') indicates how many patients fall into each hexagonal bin; darker/brighter cells correspond to higher local density.
+
+\paragraph{How it was produced.}
+From the merged analysis dataset, I filtered records with finite age and A1BG values, harmonised ICU labels, and then drew:
+\begin{itemize}
+  \item \texttt{geom\_hex(bins = 28)} to create hexagonal bins (28 bins per axis; larger values give finer resolution).
+  \item \texttt{facet\_wrap(\textasciitilde{} ICU)} to show ICU and NonICU side by side for direct comparison.
+  \item \texttt{scale\_fill\_viridis\_c()} to apply a perceptually uniform colour scale for counts.
+\end{itemize}
+
+\paragraph{What it adds.}
+Unlike a scatterplot that can obscure dense regions through overplotting, the hexbin view highlights \emph{where} observations concentrate. In this dataset, most patients cluster around ages $\sim$55--80 with A1BG expression in the $\sim$0.2--0.6 range across both strata, while a few sparse high-expression cells appear only in the NonICU panel, indicating rare outliers. The side-by-side panels make it easy to spot any shift in the bulk density between ICU and NonICU groups.
 
 \begin{figure}[H]
 \centering
-\includegraphics[width=0.75\textwidth]{fig5_pca.png}
-\caption{PCA of top-variance genes. Points are colored by ICU status and shaped by sex. Ellipses indicate group variance.}
-\label{fig:pca}
+\includegraphics[width=0.7\textwidth]{fig5_hex.png}
+\caption{Hexbin of Age vs A1BG Expression, stratified by ICU status.}
+\label{fig:hex}
 \end{figure}
+
 
 \section{Discussion}
 Overall, A1BG expression did not show strong associations with age or sex. 
