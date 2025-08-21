@@ -22,10 +22,12 @@ The dataset used in this project comes from Overmyer \textit{et al.}, 2020, whic
 For my main visualizations, I focused on the \textbf{A1BG} gene. A1BG (alpha-1-B glycoprotein) is expressed in human plasma, and I investigated its relationship with several clinical covariates, including age (continuous), sex (categorical), and ICU status (categorical). Additional covariates such as ferritin and CRP levels were also used for descriptive statistics and multivariate visualization. 
 
 \section{Methods}
-Data preprocessing and analysis were performed in R. Packages used included \texttt{ggplot2}, \texttt{dplyr}, \texttt{tidyr}, and \texttt{pheatmap} \citep{ggplot22016,dplyr2023,R-tidyr,pheatmap2019}. 
+Data preprocessing and analysis were performed in R. Packages used included \texttt{ggplot2}, \texttt{dplyr}, \texttt{tidyr}, \texttt{pheatmap}, and \texttt{hexbin} \citep{ggplot22016,dplyr2023,R-tidyr,pheatmap2019,hexbin2022}. 
 Counts were log$_2$-transformed with a pseudocount of 1 before visualization. \\
-For the heatmap, I selected the top-variance genes (n=20), standardized them by row z-scores, and clustered rows and columns using Euclidean distance with complete linkage.\\
-For dimensionality reduction, we performed principal component analysis (PCA) on the top-variance genes (log$_2$-transformed, row-standardized), using Euclidean distance on the centered and scaled expression matrix (\texttt{prcomp} with \verb|center=TRUE| and \verb|scale.=TRUE|).
+For the heatmap, I selected the top-variance genes (n=20), standardized them by row z-scores, and clustered rows and columns using Euclidean distance with complete linkage. \\
+For two-dimensional visualization, I used hexagonal binning plots (\texttt{geom\_hex}) to summarize the relationship between age and gene expression values. This approach reduces overplotting by grouping nearby points into hexagonal bins and coloring them by the number of observations.
+
+
 
 \section{Results}
 \subsection{Table of summary statistics}
